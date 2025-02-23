@@ -7,7 +7,7 @@ use crate::error::{
 use linked_hash_map::LinkedHashMap;
 use std::{cell::RefCell, fmt::Display, rc::Rc};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum OrderType {
     // grab whatever is immediately available and get out
     FillAndKill,
@@ -16,7 +16,7 @@ pub enum OrderType {
 }
 
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Side {
     Buy,
     Sell,
@@ -28,7 +28,7 @@ pub type Quantity = u32;
 pub type OrderId = i64;
 
 /// Represents an order sent to an Exchange.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Order {
     order_type: OrderType,
     order_id: OrderId,
@@ -107,34 +107,63 @@ pub type OrderRefs = LinkedHashMap<OrderId, OrderRef>;
 /// Holds modification details for an order.
 pub struct OrderModify {
     order_id: OrderId,
-    side: Side,
-    price: Price,
-    quantity: Quantity,
+    side: Option<Side>,
+    price: Option<Price>,
+    quantity: Option<Quantity>,
 }
 
 impl OrderModify {
+    pub fn new(order_id : OrderId, side : Option<Side>, price : Option<Price>, quantity: Option<Quantity>) -> Self {
+        Self {
+            order_id,
+            side,
+            price,
+            quantity
+        }
+    }
+
     pub fn get_order_id(&self) -> &OrderId {
         &self.order_id
     }
-    pub fn get_side(&self) -> &Side {
+    pub fn get_side(&self) -> &Option<Side> {
         &self.side
     }
-    pub fn get_price(&self) -> &Price {
+    pub fn get_price(&self) -> &Option<Price> {
         &self.price
     }
-    pub fn get_quantity(&self) -> &Quantity {
+    pub fn get_quantity(&self) -> &Option<Quantity> {
         &self.quantity
     }
 
-    pub fn to_order_ref(&self, order_type: OrderType) -> OrderRef {
-        Rc::new(RefCell::new(Order::new(
-            // all values copied over
-            order_type,
+    pub fn to_order(&self, order_to_modify: Order) -> OrdResult<Order> {
+        if order_to_modify.get_order_id() != self.get_order_id() {
+            return Err(ModificationError(format!(
+                "Provided order {} doesn't have desired order id {} ...", order_to_modify.get_order_id(), self.get_order_id()
+            )));
+        }
+
+        let new_side = match self.get_side() {
+            Some(side) => *side,
+            None => *order_to_modify.get_side()
+        };
+
+        let new_price = match self.get_price() {
+            Some(price) => *price,
+            None => *order_to_modify.get_price()
+        };
+
+        let new_quantity = match self.get_quantity() {
+            Some(quantity) => *quantity,
+            None => *order_to_modify.get_initial_quantity()
+        };
+
+        Ok(Order::new(
+            *order_to_modify.get_order_type(),
             self.order_id,
-            self.side,
-            self.price,
-            self.quantity,
-        )))
+            new_side,
+            new_price,
+            new_quantity,
+        ))
     }
 }
 
@@ -184,4 +213,81 @@ mod tests {
     }
 
     // OrderModify
+
+    #[test]
+    fn test_modify_order() -> OrdResult<()> {
+        let order_id : OrderId = 101212;
+
+        let order_to_modify = Order::new(
+            OrderType::GoodTillCancel,
+            order_id,
+            Side::Sell,
+            30 as Price,
+            100 as Quantity,
+        );
+
+        let mod_details_1 = OrderModify::new(
+            order_id,
+            None,
+            Some(44),
+            None
+        );
+
+        let order = mod_details_1.to_order(order_to_modify)?;
+
+        assert_eq!(
+            order,
+            Order::new(
+                OrderType::GoodTillCancel,
+                order_id,
+                Side::Sell,
+                44 as Price,
+                100 as Quantity
+            )
+        );
+
+        let mod_details_2 = OrderModify::new(
+            101212 as OrderId,
+            Some(Side::Buy),
+            None,
+            Some(400),
+        );
+
+        let order = mod_details_2.to_order(order)?;
+
+        assert_eq!(
+            order,
+            Order::new(
+                OrderType::GoodTillCancel,
+                order_id,
+                Side::Buy,
+                44 as Price,
+                400 as Quantity
+            )
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_modify_order_mismatched_ids() {
+        let order_to_modify = Order::new(
+            OrderType::GoodTillCancel,
+            101212 as OrderId,
+            Side::Sell,
+            30 as Price,
+            100 as Quantity,
+        );
+
+        let mod_details_1 = OrderModify::new(
+            10,
+            None,
+            Some(44),
+            None
+        );
+
+        let order = mod_details_1.to_order(order_to_modify);
+
+        assert!(matches!(order, Err(OrderError::ModificationError(_))));
+    }
 }
