@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use ::orderbook::orderbook::OrderBook;
 use orderbook::{error::BookResult, order::*, trade::*};
 
-// test each function in orderbook, test all edge cases, first
+// integration tests here
 
 #[test]
 fn match_two_good_till_cancels() -> BookResult<()> {
