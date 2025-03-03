@@ -20,7 +20,7 @@ pub enum OrderError {
     #[error("Tried to overfill Order by {surplus} qty...")]
     RequestedFillTooLarge { surplus: Quantity },
     #[error("")]
-    ModificationError(String)
+    ModificationError(String),
 }
 
 impl From<OrderError> for OrderBookError {
@@ -31,13 +31,11 @@ impl From<OrderError> for OrderBookError {
                     "Book tried to overfill an order by {}",
                     quantity
                 ))
-            },
-            OrderError::ModificationError(err_msg) => {
-                Self::InternalOrderProcessingError(format!(
-                    "Book tried to modify order... {}",
-                    err_msg
-                ))
             }
+            OrderError::ModificationError(err_msg) => Self::InternalOrderProcessingError(format!(
+                "Book tried to modify order... {}",
+                err_msg
+            )),
         }
     }
 }

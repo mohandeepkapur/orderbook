@@ -8,6 +8,5 @@ use orderbook::{error::BookResult, order::*, orderbook::*};
 use std::{cell::RefCell, rc::Rc};
 
 fn main() -> BookResult<()> {
-    let mut orderbook: OrderBook = OrderBook::new("XYZ");
     Ok(())
 }

@@ -154,17 +154,18 @@ impl OrderBook {
     pub fn modify_order(&mut self, order: OrderModify) -> BookResult<Option<Trades>> {
         let order_id = order.get_order_id();
 
-        let old_order  = 
-            // confirms whether order exists
-            self.get_order_ref(order_id)?.borrow()
+        // confirms whether order exists
+        let old_order = self
+            .get_order_ref(order_id)?
+            .borrow()
             // can't move Order out of Ref<'_, Order>, must clone
             // to adhere to new OrderModify API
             .clone();
 
         // ^ with curr impl, 2 clones needed to modify an Order ***
-        
+
         self.cancel_order(*order_id)?;
-        
+
         self.add_order(order.to_order(old_order)?.to_order_ref())
     }
 

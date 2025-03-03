@@ -15,7 +15,6 @@ pub enum OrderType {
     GoodTillCancel,
 }
 
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Side {
     Buy,
@@ -113,12 +112,17 @@ pub struct OrderModify {
 }
 
 impl OrderModify {
-    pub fn new(order_id : OrderId, side : Option<Side>, price : Option<Price>, quantity: Option<Quantity>) -> Self {
+    pub fn new(
+        order_id: OrderId,
+        side: Option<Side>,
+        price: Option<Price>,
+        quantity: Option<Quantity>,
+    ) -> Self {
         Self {
             order_id,
             side,
             price,
-            quantity
+            quantity,
         }
     }
 
@@ -138,23 +142,25 @@ impl OrderModify {
     pub fn to_order(&self, order_to_modify: Order) -> OrdResult<Order> {
         if order_to_modify.get_order_id() != self.get_order_id() {
             return Err(ModificationError(format!(
-                "Provided order {} doesn't have desired order id {} ...", order_to_modify.get_order_id(), self.get_order_id()
+                "Provided order {} doesn't have desired order id {} ...",
+                order_to_modify.get_order_id(),
+                self.get_order_id()
             )));
         }
 
         let new_side = match self.get_side() {
             Some(side) => *side,
-            None => *order_to_modify.get_side()
+            None => *order_to_modify.get_side(),
         };
 
         let new_price = match self.get_price() {
             Some(price) => *price,
-            None => *order_to_modify.get_price()
+            None => *order_to_modify.get_price(),
         };
 
         let new_quantity = match self.get_quantity() {
             Some(quantity) => *quantity,
-            None => *order_to_modify.get_initial_quantity()
+            None => *order_to_modify.get_initial_quantity(),
         };
 
         Ok(Order::new(
@@ -174,7 +180,7 @@ mod tests {
     // Order
 
     #[test]
-    fn test_fill_order() -> OrdResult<()>{
+    fn test_fill_order() -> OrdResult<()> {
         let mut order = Order::new(
             OrderType::GoodTillCancel,
             101212 as OrderId,
@@ -209,14 +215,17 @@ mod tests {
             100 as Quantity,
         );
 
-        assert_eq!(order.fill(130), Err(OrderError::RequestedFillTooLarge { surplus: 30 }));
+        assert_eq!(
+            order.fill(130),
+            Err(OrderError::RequestedFillTooLarge { surplus: 30 })
+        );
     }
 
     // OrderModify
 
     #[test]
     fn test_modify_order() -> OrdResult<()> {
-        let order_id : OrderId = 101212;
+        let order_id: OrderId = 101212;
 
         let order_to_modify = Order::new(
             OrderType::GoodTillCancel,
@@ -226,12 +235,7 @@ mod tests {
             100 as Quantity,
         );
 
-        let mod_details_1 = OrderModify::new(
-            order_id,
-            None,
-            Some(44),
-            None
-        );
+        let mod_details_1 = OrderModify::new(order_id, None, Some(44), None);
 
         let order = mod_details_1.to_order(order_to_modify)?;
 
@@ -246,12 +250,7 @@ mod tests {
             )
         );
 
-        let mod_details_2 = OrderModify::new(
-            101212 as OrderId,
-            Some(Side::Buy),
-            None,
-            Some(400),
-        );
+        let mod_details_2 = OrderModify::new(101212 as OrderId, Some(Side::Buy), None, Some(400));
 
         let order = mod_details_2.to_order(order)?;
 
@@ -279,12 +278,7 @@ mod tests {
             100 as Quantity,
         );
 
-        let mod_details_1 = OrderModify::new(
-            10,
-            None,
-            Some(44),
-            None
-        );
+        let mod_details_1 = OrderModify::new(10, None, Some(44), None);
 
         let order = mod_details_1.to_order(order_to_modify);
 
