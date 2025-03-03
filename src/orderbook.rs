@@ -70,7 +70,7 @@ impl OrderBook {
     /// - Returns [`OrderAlreadyExists`](crate::error::OrderBookError)
     /// - Returns [`InternalOrderProcessingError`](crate::error::OrderBookError)
     pub fn add_order(&mut self, order: OrderRef) -> BookResult<Option<Trades>> {
-        let order_ref = order.borrow();
+        let order_ref = order.lock().unwrap();
 
         // check if order to add id exists in book
         let order_id = order_ref.get_order_id();
@@ -157,7 +157,8 @@ impl OrderBook {
         // confirms whether order exists
         let old_order = self
             .get_order_ref(order_id)?
-            .borrow()
+            .lock()
+            .unwrap()
             // can't move Order out of Ref<'_, Order>, must clone
             // to adhere to new OrderModify API
             .clone();
@@ -178,7 +179,7 @@ impl OrderBook {
             .map(|(price, bids)| {
                 let quantity: Quantity = bids
                     .iter()
-                    .map(|(_, order)| *order.borrow().get_remaining_quantity())
+                    .map(|(_, order)| *order.lock().unwrap().get_remaining_quantity())
                     .sum();
                 return LevelInfo {
                     price: *price,
@@ -193,7 +194,7 @@ impl OrderBook {
             .map(|(price, asks)| {
                 let quantity: Quantity = asks
                     .iter()
-                    .map(|(_, order)| *order.borrow().get_remaining_quantity())
+                    .map(|(_, order)| *order.lock().unwrap().get_remaining_quantity())
                     .sum();
                 return LevelInfo {
                     price: *price,
@@ -257,12 +258,12 @@ impl OrderBook {
             // match best bids with best asks
             while bids.len() != 0 && asks.len() != 0 {
                 let mut bid = match bids.front() {
-                    Some((_, bid)) => bid.borrow_mut(),
+                    Some((_, bid)) => bid.lock().unwrap(),
                     None => break, // unreachable
                 };
 
                 let mut ask = match asks.front() {
-                    Some((_, ask)) => ask.borrow_mut(),
+                    Some((_, ask)) => ask.lock().unwrap(),
                     None => break, // unreachable
                 };
 
@@ -348,7 +349,8 @@ impl OrderBook {
             let order = orders
                 .back()
                 .map_or(Err(BookSideEmpty(side)), |(_, order)| Ok(order))?
-                .borrow();
+                .lock()
+                .unwrap();
             match order.get_order_type() {
                 OrderType::FillAndKill => Some(*order.get_order_id()),
                 _ => None,

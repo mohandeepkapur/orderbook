@@ -5,7 +5,7 @@ use crate::error::{
 };
 
 use linked_hash_map::LinkedHashMap;
-use std::{cell::RefCell, fmt::Display, rc::Rc};
+use std::{cell::RefCell, fmt::Display, rc::Rc, sync::{Arc, Mutex}};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum OrderType {
@@ -95,11 +95,11 @@ impl Order {
     }
 
     pub fn to_order_ref(self) -> OrderRef {
-        Rc::new(RefCell::new(self))
+        Arc::new(Mutex::new(self))
     }
 }
 
-pub type OrderRef = Rc<RefCell<Order>>;
+pub type OrderRef = Arc<Mutex<Order>>;
 
 pub type OrderRefs = LinkedHashMap<OrderId, OrderRef>;
 

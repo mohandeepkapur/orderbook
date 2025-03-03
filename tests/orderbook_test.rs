@@ -12,29 +12,25 @@ fn match_two_good_till_cancels() -> BookResult<()> {
     let bid_price: Price = 10000;
     let ask_price: Price = 12000;
 
-    let bid = produce_order_ref(Order::new(
+    let bid = Order::new(
         OrderType::GoodTillCancel,
         101212 as OrderId,
         Side::Buy,
         bid_price,
         100 as Quantity,
-    ));
+    ).to_order_ref();
 
-    let ask = produce_order_ref(Order::new(
+    let ask = Order::new(
         OrderType::GoodTillCancel,
-        101212 as OrderId,
+        111 as OrderId,
         Side::Sell,
         ask_price,
         100 as Quantity,
-    ));
+    ).to_order_ref();
 
     book.add_order(bid)?;
     let trade = book.add_order(ask)?;
     println!("{:?}", trade);
     assert!(trade.is_none());
     Ok(())
-}
-
-fn produce_order_ref(order: Order) -> OrderRef {
-    Rc::new(RefCell::new(order))
 }
